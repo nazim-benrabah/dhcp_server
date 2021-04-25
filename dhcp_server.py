@@ -4,7 +4,7 @@ from socket import *
 
 import scapy
 
-from dhcp_parameters import parametrisation
+from dhcp_parameters import get_parameters
 import random
 import binascii
 from getmac import get_mac_address as gma
@@ -168,7 +168,7 @@ def send_ack(
 
 def run_server():
 
-    param_data = parametrisation()
+    param_data = get_parameters()
 
     listen(param_data)
 

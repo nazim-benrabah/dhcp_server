@@ -3,6 +3,7 @@ from socket import *
 import ipcalc
 import os
 from netaddr import IPNetwork
+import json
 
 
 def get_subnet(IpAdress, mask):
@@ -171,5 +172,52 @@ def parametrisation():
     return param_data
 
 
+def read_param_data():
+    with open("dhcp_config.json") as file:
+        param_data = json.load(file)
+    print("Retrieved configuration from dhcp_config.json")
+    return param_data
+
+
+def write_param_data(param_data):
+    with open("dhcp_config.json", "w") as file:
+        json.dump(param_data, file)
+    print("Saved configuration in dhcp_config.json")
+
+
+def get_parameters():
+
+    while 1:
+        default = input("Use previous configuration ? (y/n) : ")
+
+        if default.lower() == "y":
+
+            if not os.path.isfile("dhcp_config.json"):
+                print(
+                    "Could not find previous configuration file, please enter a new configuration."
+                )
+
+                param_data = parametrisation()
+                write_param_data(param_data)
+
+            else:
+                param_data = read_param_data()
+
+            break
+
+        elif default.lower() == "n":
+            param_data = parametrisation()
+            write_param_data(param_data)
+            break
+
+        else:
+            print("Please answer with (y/n)")
+
+    return param_data
+
+
 if __name__ == "__main__":
-    param_data = parametrisation()
+    # param_data = parametrisation()
+
+    param_data = get_parameters()
+    print(param_data)
