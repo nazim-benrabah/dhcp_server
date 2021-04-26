@@ -202,7 +202,6 @@ def get_parameters():
 
             else:
                 param_data = read_param_data()
-
             break
 
         elif default.lower() == "n":
@@ -217,7 +216,6 @@ def get_parameters():
 
 
 if __name__ == "__main__":
-    # param_data = parametrisation()
 
     param_data = get_parameters()
     print(param_data)
