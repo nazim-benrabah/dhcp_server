@@ -9,6 +9,14 @@ import random
 import binascii
 from getmac import get_mac_address as gma
 
+import logging
+
+logging.basicConfig(
+    filename="DHCP.log",
+    level=logging.INFO,
+    format="%(levelname)s:%(asctime)s:%(message)s",
+)
+
 
 def listen(param_data):
 
@@ -48,6 +56,7 @@ def listen(param_data):
 
         if msgtype == "01":
             print("\nDHCP Discover arrived from %s \nSending DHCP Offer..." % mac_addr)
+            logging.info(f"DHCP discover received from MAC: {mac_addr}")
             send_offer(
                 srv_ip,
                 ip_offered,
@@ -60,8 +69,11 @@ def listen(param_data):
                 timeout,
                 transaction_id,
             )
+            logging.info(f"DHCP offer sent to MAC: {mac_addr} with IP: {ip_offered}")
+
         elif msgtype == "03":
             print("\nDHCP request arrived from %s \nSending DHCP ACK..." % mac_addr)
+            logging.info(f"DHCP request received from MAC: {mac_addr}")
             send_ack(
                 srv_ip,
                 ip_offered,
@@ -74,6 +86,7 @@ def listen(param_data):
                 timeout,
                 transaction_id,
             )
+            logging.info(f"DHCP ack sent to MAC: {mac_addr} with IP: {ip_offered}")
 
 
 def send_offer(
@@ -168,8 +181,10 @@ def send_ack(
 
 def run_server():
 
-    param_data = get_parameters()
+    logging.info("Server started.")
 
+    param_data = get_parameters()
+    logging.info("Configuration retrieved.")
     listen(param_data)
 
 
