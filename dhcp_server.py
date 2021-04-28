@@ -3,7 +3,6 @@ from scapy.all import *
 from socket import *
 
 import scapy
-
 from dhcp_parameters import get_parameters
 import random
 import binascii
@@ -39,7 +38,6 @@ def listen(param_data):
     while True:
 
         message, clientAddress = serverSocket.recvfrom(1024)
-        # print(hexdump(message))
         m = binascii.hexlify((message)).decode("utf-8")
 
         mac_addr = m[56:68]
@@ -49,15 +47,14 @@ def listen(param_data):
         transaction_id = "0x" + m[8:16]
         transaction_id = int("0x" + m[8:16], 16)
 
-        print(transaction_id)
-        print(mac_addr)
+        # print(transaction_id)
+        # print(mac_addr)
 
         msgtype = m[484] + m[485]
 
-        if msgtype == "01":
-            print("\nDHCP Discover arrived from %s \nSending DHCP Offer..." % mac_addr)
-            logging.info(f"DHCP discover received from MAC: {mac_addr}")
-            send_offer(
+        if not param_data["address_filtering"]:
+            logging.info(f"Mac address filtering is not enabled.")
+            server_respond(
                 srv_ip,
                 ip_offered,
                 mac_addr,
@@ -68,25 +65,84 @@ def listen(param_data):
                 dns2,
                 timeout,
                 transaction_id,
+                msgtype,
             )
-            logging.info(f"DHCP offer sent to MAC: {mac_addr} with IP: {ip_offered}")
+        else:
+            logging.info(f"Mac address filtering is enabled.")
+            if (
+                param_data["action"] == "deny"
+                and mac_addr.lower() not in param_data["filter_pool"]
+            ) or (
+                param_data["action"] == "enable"
+                and mac_addr.lower() in param_data["filter_pool"]
+            ):
+                server_respond(
+                    srv_ip,
+                    ip_offered,
+                    mac_addr,
+                    broadcast,
+                    gateway,
+                    netmask,
+                    dns1,
+                    dns2,
+                    timeout,
+                    transaction_id,
+                    msgtype,
+                )
+            else:
+                logging.info(
+                    f"Denied request from mac address : {mac_addr} (Mac address filter match)"
+                )
 
-        elif msgtype == "03":
-            print("\nDHCP request arrived from %s \nSending DHCP ACK..." % mac_addr)
-            logging.info(f"DHCP request received from MAC: {mac_addr}")
-            send_ack(
-                srv_ip,
-                ip_offered,
-                mac_addr,
-                broadcast,
-                gateway,
-                netmask,
-                dns1,
-                dns2,
-                timeout,
-                transaction_id,
-            )
-            logging.info(f"DHCP ack sent to MAC: {mac_addr} with IP: {ip_offered}")
+
+def server_respond(
+    srv_ip,
+    ip_offered,
+    mac_addr,
+    broadcast,
+    gateway,
+    netmask,
+    dns1,
+    dns2,
+    timeout,
+    transaction_id,
+    msgtype,
+):
+    if msgtype == "01":
+
+        print("\nDHCP Discover arrived from %s \nSending DHCP Offer..." % mac_addr)
+        logging.info(f"DHCP discover received from MAC: {mac_addr}")
+
+        send_offer(
+            srv_ip,
+            ip_offered,
+            mac_addr,
+            broadcast,
+            gateway,
+            netmask,
+            dns1,
+            dns2,
+            timeout,
+            transaction_id,
+        )
+
+    elif msgtype == "03":
+
+        print("\nDHCP request arrived from %s \nSending DHCP ACK..." % mac_addr)
+        logging.info(f"DHCP request received from MAC: {mac_addr}")
+
+        send_ack(
+            srv_ip,
+            ip_offered,
+            mac_addr,
+            broadcast,
+            gateway,
+            netmask,
+            dns1,
+            dns2,
+            timeout,
+            transaction_id,
+        )
 
 
 def send_offer(
@@ -126,6 +182,7 @@ def send_offer(
     )
     paquet = ethernet / ip / udp / bootp / dhcp
     sendp(paquet)
+    logging.info(f"DHCP offer sent to MAC: {client_mac} with IP: {ip_offered}")
 
 
 def send_ack(
@@ -165,6 +222,7 @@ def send_ack(
     )
     paquet = ethernet / ip / udp / bootp / dhcp
     sendp(paquet)
+    logging.info(f"DHCP ack sent to MAC: {client_mac} with IP: {ip_offered}")
 
 
 # srv_ip = "127.0.0.1"
@@ -192,6 +250,7 @@ if __name__ == "__main__":
 
     run_server()
 
-# sudo nmap --script broadcast dhcp-discover     to send DHCP Discover
+
+# sudo nmap --script broadcast-dhcp-discover     to send DHCP Discover
 # sudo netwox 171 -d lo		to send DHCP DISCOVER
 # sudo dhcping -s 255.255.255.255 -h fa:fa:fa:fa:fa:fa   to send dhcprequest with a specifif client mac to a specific server ip

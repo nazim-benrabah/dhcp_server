@@ -4,13 +4,14 @@ import ipcalc
 import os
 from netaddr import IPNetwork
 import json
+import re
 
 
 def get_subnet(IpAdress, mask):
 
     addr = ipcalc.IP(IpAdress, mask=mask)
     network_with_cidr = str(addr.guess_network())
-    subnet_add = network_with_cidr.split("/")[0]
+    # subnet_add = network_with_cidr.split("/")[0]
 
     return network_with_cidr
 
@@ -21,8 +22,6 @@ def clean_pool(pool):
 
     with os.popen("arp -a") as f:
         data = f.read()
-
-    import re
 
     for line in re.findall("([(.0-9)]+)\s", data):
         line = line.replace("(", "").replace(")", "")
@@ -149,15 +148,54 @@ def parametrisation():
 
     timeout = int(input("Durée du bail en secondes : "))
 
-    # print("--------configuration sauvgardée-------")
-    # print("Adresse du réseau : ", net_add)
-    # print("Adresse broadcast : ", net_broadcast_add)
-    # print("Adresse de la gateway : ", gateway)
-    # print("DNS primaire : ", dns_primaire)
-    # print("DNS secondaire : ", dns_secondaire)
-    # print("Plage d'adresses allouée : ", pool)
-    # print("Durée du bail (s): ", timeout)
-    # print("--------")
+    while 1:
+        address_filtering_input = input(
+            "Do you want to enable address filtering (y/n) : "
+        )
+
+        if address_filtering_input == "y":
+            address_filtering = True
+            break
+        elif address_filtering_input == "n":
+            address_filtering = False
+            break
+        else:
+            print("Please answer by typing y/n...")
+
+    action = "deny"
+    filter_list = []
+
+    if address_filtering == True:
+
+        while 1:
+            action_input = input("Specify filtering action (deny/enable) : ")
+
+            if action_input.lower() == "deny":
+                action = "deny"
+                break
+
+            elif action_input.lower() == "enable":
+                action = "enable"
+                break
+
+            else:
+                print("Please answer by typing deny/enable...")
+
+        p = re.compile(r"(?:[0-9a-fA-F]:?){12}")
+
+        while 1:
+            mac_input = input("Enter @mac to filter (q to quit) : ")
+
+            mac_format_check = re.match(p, mac_input.lower())
+
+            if mac_format_check == None and mac_input.lower() != "q":
+                print("Wrong mac address format (aa:aa:aa:aa:aa:aa)...")
+
+            elif mac_format_check != None:
+                filter_list.append(mac_input.lower())
+
+            elif mac_input.lower() == "q":
+                break
 
     param_data = {
         "net_add": net_add,
@@ -168,6 +206,9 @@ def parametrisation():
         "dns_secondary": dns_secondaire,
         "pool": pool,
         "timeout": timeout,
+        "address_filtering": address_filtering,
+        "action": action,
+        "filter_pool": filter_list,
     }
     return param_data
 
@@ -181,7 +222,7 @@ def read_param_data():
 
 def write_param_data(param_data):
     with open("dhcp_config.json", "w") as file:
-        json.dump(param_data, file)
+        json.dump(param_data, file, indent=2)
     print("Saved configuration in dhcp_config.json")
 
 
