@@ -7,6 +7,14 @@ import json
 import re
 
 
+def ip_hex2dec(ip):
+    ip1=str(int(ip[0:2],16))
+    ip2=str(int(ip[2:4],16))
+    ip3=str(int(ip[4:6],16))
+    ip4=str(int(ip[6:8],16))
+    ipConverted=ip1+'.'+ip2+'.'+ip3+'.'+ip4
+    return ipConverted
+
 def get_subnet(IpAdress, mask):
 
     addr = ipcalc.IP(IpAdress, mask=mask)
@@ -49,8 +57,7 @@ def parametrisation():
 
     net_broadcast_add = str(IPNetwork(str(net_add))[-1])
 
-    x = False
-    while x == False:
+    while True:
 
         gateway = str(input("Adresse de la passerelle par défaut: "))
 
@@ -61,9 +68,9 @@ def parametrisation():
             and gateway != net_broadcast_add
             and gateway != net_add.split("/")[0]
         ):
-            x = True
+            break
         else:
-            x = False
+
             print(
                 "ERREUR : l'adresse doit appartenir au meme réseau et ne doit pas etre identique à "
                 + net_add.split("/")[0]
@@ -79,8 +86,8 @@ def parametrisation():
 
     print("Plage d'adresses")
 
-    x = False
-    while x == False:
+
+    while True:
 
         start_ip_address = str(input("Enter first ip address : "))
         subnet_add_start = get_subnet(start_ip_address, subnet_mask)
@@ -90,9 +97,9 @@ def parametrisation():
             and start_ip_address != net_broadcast_add
             and start_ip_address != net_add.split("/")[0]
         ):
-            x = True
+            break
         else:
-            x = False
+
             print(
                 "ERREUR : l'adresse doit appartenir au meme réseau que vous avez introduit, et ne doit pas etre identique à "
                 + net_add.split("/")[0]
@@ -101,8 +108,7 @@ def parametrisation():
                 + " ||"
             )
 
-    x = False
-    while x == False:
+    while True:
 
         last_ip_address = str(input("Enter last ip address : "))
 
@@ -113,9 +119,8 @@ def parametrisation():
             and last_ip_address != net_broadcast_add
             and last_ip_address != net_add.split("/")[0]
         ):
-            x = True
+            break
         else:
-            x = False
             print(
                 "ERREUR : l'adresse doit appartenir au meme réseau que que vous avez introduit, et ne doit pas etre identique à "
                 + net_add.split("/")[0]
@@ -134,19 +139,18 @@ def parametrisation():
     target_ibdex = pool.index(start_ip_address)
     pool = pool[target_ibdex:]
 
-    y = False
+    
     for p in pool:
         if p == gateway:
-            y = True
-
-    if y == True:
-        pool.remove(gateway)
+            pool.remove(gateway)
 
     print("--------")
 
-    pool = clean_pool(pool)
+    #pool = clean_pool(pool)
 
     timeout = int(input("Durée du bail en secondes : "))
+
+    print("--------")
 
     while 1:
         address_filtering_input = input(
@@ -197,6 +201,23 @@ def parametrisation():
             elif mac_input.lower() == "q":
                 break
 
+
+    print('--------')
+    dos_protection=str(input('Do you want to secure your server against denial of service attacks ? (y/n) : '))
+
+    if dos_protection.lower()=='y':
+        dos_protection=True
+        print('You must specify how many DHCP messages you will accept to recieve and in how long ')
+        max_requests=int(input("Maximum messages : "))
+        delay=int(input("Delay (s) : "))
+        
+    elif dos_protection.lower()=='n':
+        dos_protection=False
+        max_requests=''
+        delay=''
+    
+
+
     param_data = {
         "net_add": net_add,
         "subnet_mask": subnet_mask,
@@ -206,9 +227,14 @@ def parametrisation():
         "dns_secondary": dns_secondaire,
         "pool": pool,
         "timeout": timeout,
+
         "address_filtering": address_filtering,
         "action": action,
         "filter_pool": filter_list,
+
+        'dos_protection':dos_protection,
+        'max_requests':max_requests,
+        'delay':delay
     }
     return param_data
 
@@ -223,7 +249,7 @@ def read_param_data():
 def write_param_data(param_data):
     with open("dhcp_config.json", "w") as file:
         json.dump(param_data, file, indent=2)
-    print("Saved configuration in dhcp_config.json")
+    print("\n-------------------------------\nSaved configuration in dhcp_config.json\n-------------------------------\n")
 
 
 def get_parameters():

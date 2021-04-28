@@ -1,9 +1,8 @@
 # import sys
 from scapy.all import *
 from socket import *
-
 import scapy
-from dhcp_parameters import get_parameters
+from dhcp_parameters import get_parameters, clean_pool, ip_hex2dec
 import random
 import binascii
 from getmac import get_mac_address as gma
@@ -27,7 +26,11 @@ def listen(param_data):
     dns2 = param_data["dns_secondary"]
     timeout = param_data["timeout"]
     pool = param_data["pool"]
-    ip_offered = random.choice(pool)
+    dos_protection=param_data["dos_protection"]
+    #ip_offered = random.choice(pool)
+
+
+    times=[]
 
     serverPort = 67
 
@@ -38,6 +41,17 @@ def listen(param_data):
     while True:
 
         message, clientAddress = serverSocket.recvfrom(1024)
+
+        times.append(time.time())
+        if dos_protection==True:
+            if len(times)==param_data["max_requests"]:
+                if (times[-1]-times[0])<param_data["delay"]:
+                    print('-------------ALERTE DOS ! DHCP SERVER SHUTS DOWN---------------')
+                    logging.info(f"Denial of Services Attack detected ! DHCP Server shuts down ")
+                    break
+                else:
+                    times=[]
+
         m = binascii.hexlify((message)).decode("utf-8")
 
         mac_addr = m[56:68]
@@ -51,6 +65,20 @@ def listen(param_data):
         # print(mac_addr)
 
         msgtype = m[484] + m[485]
+
+        pool=clean_pool(pool)
+
+        ip_requested=m[24:32]
+        ip_requested=ip_hex2dec(ip_requested)
+
+        if ip_requested!='0.0.0.0':
+            if ip_requested in pool:
+                ip_offered=ip_requested
+            else:
+                ip_offered=random.choice(pool)
+        else:
+            ip_offered=random.choice(pool)
+
 
         if not param_data["address_filtering"]:
             logging.info(f"Mac address filtering is not enabled.")
